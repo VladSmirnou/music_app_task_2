@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+  flask-serv-mus:
+    build: .
+    command: bash -c "
+          pip install -r requirements.txt &&
+          if ! test -d "./migrations"; then \
+              flask db init; \
+              flask db migrate -m 'Initial migration'; \
+              flask db upgrade; \
+          fi &&
+          apt-get -y update &&
+          apt-get install -y ffmpeg &&
+          python3 run.py"
+    ports:
+      - 5000:5000
+    env_file:
+      - .env
+    depends_on:
+      postgres-serv-mus:
+        condition: service_healthy
+        
+  postgres-serv-mus:
+    image: postgres:latest
+    container_name: postgres_music_app
+    environment: 
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - postgres-volume-mus:/var/lib/postgresql/data
+
+volumes:
+  postgres-volume-mus:
